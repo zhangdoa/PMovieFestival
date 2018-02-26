@@ -1,4 +1,4 @@
-__author__ = 'zhangdoa'
+﻿__author__ = 'zhangdoa'
 
 import requests
 from bs4 import BeautifulSoup
@@ -6,45 +6,56 @@ from selenium import webdriver
 import time
 import re
 
-class MovieFestival:
+class MovieFestivalSpider:
 
     def __init__(self):
-        self.FestivalTitle = '柏林国际电影节'
-        self.AwardTitle = ['最佳影片', '金熊奖']
-        self.DoubanURL = 'https://movie.douban.com/awards/berlinale/'
+        self.URL = 'https://movie.douban.com/awards/'
 
     def writeToFile(self, fileLocation, data):
-        with (open(fileLocation + self.FestivalTitle + '.txt', 'a', encoding="utf-8-sig")) as m:
+        with (open(fileLocation + '.txt', 'a', encoding="utf-8-sig")) as m:
             m.write(data)
             m.write(u"\r\n")
 
-    def getSingleYearUrl(self, year, url):
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36'}
+    def getSingleYearUrl(self, url, movieFestivalCodeName):
         res = requests.get(url)
         soup = BeautifulSoup(res.text, 'html.parser')
-        print('正在抓取' + self.FestivalTitle + str(year) + self.AwardTitle[0])
-        for mod in soup.find_all(class_ = 'mod'):
-            for dt in mod.find_all('dt'):
-                for string in dt.stripped_strings:
-                    if string in self.AwardTitle:
-                        for link in (dt.next_sibling.next_sibling).find_all('a'):
-                            self.writeToFile('D:/', self.FestivalTitle + "||" + str(year) + '||' + self.AwardTitle[0] + '||' + link.string + '||' + link.get('href') + '||')
-        print('抓取完成\n') 
+        sectionTags = soup.find_all('div', class_="info")
+        festivalTitle = "DefaultFestivalTitle"
+        for sectionTag in sectionTags:
+            festivalTitle = sectionTag.h1.get_text().strip()
+            festivalTitle = festivalTitle.split("(")[0].strip()
+            print('正在抓取' + festivalTitle)
+        awardLists = soup.find_all('div', class_="section award_list")
+        for awardList in awardLists:
+            awards = awardList.find_all('div', class_="mod")
+            for award in awards:
+                if award.find_all('h4'):
+                    awardTitle = award.find_all('h4')[0].get_text().strip()
+                else:
+                    awardTitle = "- 其他 / Others -"
+                datas = award.find_all('ul')
+                for data in datas:
+                    if data.find_all('li'):
+                        subAwardTitle = data.find_all('li')[0].find_all('dt')[0].get_text().strip()
+                        movieTitle = "《" + data.find_all('li')[0].find_all('a')[0].get_text() + "》"
+                        link = data.find_all('li')[0].find_all('a')[0]['href'].strip()
+                        self.writeToFile('D:/' + movieFestivalCodeName, festivalTitle + "||" + awardTitle + "||" + subAwardTitle + '||' + movieTitle  + '||' + link + '||')
+        print('抓取完成') 
         
-    def getAllYearsUrl(self):
-        #柏林电影节第一届网页有问题，没有历届回顾，需要加偏移值
-        URL = self.DoubanURL + str(1) + '/'
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36'}
+    def getAllYearsUrl(self, movieFestivalCodeName):
+        i = 1
+        URL = self.URL + movieFestivalCodeName + '/' + str(i) + "/"
         res = requests.get(URL)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        for ya in soup.find_all(id='year_awards'):
-            for ul in ya.find_all('ul'):
-                for li in ul.find_all('li'):
-                    self.getSingleYearUrl(int(li.a.string), li.a.get('href'))
-                    time.sleep(1.5)
+        while res:
+            self.getSingleYearUrl(URL, movieFestivalCodeName)
+            i = i + 1
+            time.sleep(0.1)
+            URL = self.URL + movieFestivalCodeName + '/' + str(i) + "/"
+            res = requests.get(URL)
+                              
 
-    def main(self):
-        self.getAllYearsUrl()
+    def main(self, movieFestivalCodeName):
+        self.getAllYearsUrl(movieFestivalCodeName)
         
 class DummyBrowser:
     def __init__(self):
@@ -61,19 +72,13 @@ class DummyBrowser:
         driver.quit()
 
 
-#Berlin = MovieFestival()
-#Berlin.main()
+Berlin = MovieFestivalSpider()
+Berlin.main("berlinale")
 
-#Venice = MovieFestival()
-#Venice.FestivalTitle = '威尼斯电影节'
-#Venice.AwardTitle = ['金狮奖']
-#Venice.DoubanURL = 'https://movie.douban.com/awards/venice/'
-#Venice.main()
+Venice = MovieFestivalSpider()
+Venice.main("venice")
 
-#Cannes = MovieFestival()
-#Cannes.FestivalTitle = '戛纳电影节'
-#Cannes.AwardTitle = ['金棕榈奖']
-#Cannes.DoubanURL = 'https://movie.douban.com/awards/cannes/'
-#Cannes.main()
+Cannes = MovieFestivalSpider()
+Cannes.main("cannes")
 
-dummyHand = DummyBrowser()
+#dummyHand = DummyBrowser()
