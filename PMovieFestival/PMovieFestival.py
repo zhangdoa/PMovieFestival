@@ -13,10 +13,10 @@ class MovieFestivalSpider:
 
     def writeToFile(self, fileLocation, data):
         with (open(fileLocation + '.txt', 'a', encoding="utf-8-sig")) as m:
-            m.write(data)
-            m.write(u"\r\n")
+            for i in data:
+                m.write(i)
 
-    def getSingleYearUrl(self, url, movieFestivalCodeName):
+    def getSingleYearUrl(self, url, movieFestivalCodeName, result):
         res = requests.get(url)
         soup = BeautifulSoup(res.text, 'html.parser')
         sectionTags = soup.find_all('div', class_="info")
@@ -39,23 +39,24 @@ class MovieFestivalSpider:
                         subAwardTitle = data.find_all('li')[0].find_all('dt')[0].get_text().strip()
                         movieTitle = "《" + data.find_all('li')[0].find_all('a')[0].get_text() + "》"
                         link = data.find_all('li')[0].find_all('a')[0]['href'].strip()
-                        self.writeToFile('D:/' + movieFestivalCodeName, festivalTitle + "||" + awardTitle + "||" + subAwardTitle + '||' + movieTitle  + '||' + link + '||')
-        print('抓取完成') 
+                        result.append(festivalTitle + "||" + awardTitle + "||" + subAwardTitle + '||' + movieTitle  + '||' + link + '||' + u"\r\n")
+        print(festivalTitle + '抓取完成') 
         
-    def getAllYearsUrl(self, movieFestivalCodeName):
+    def getAllYearsUrl(self, movieFestivalCodeName, savePath):
+        result = []
         i = 1
         URL = self.URL + movieFestivalCodeName + '/' + str(i) + "/"
         res = requests.get(URL)
         while res:
-            self.getSingleYearUrl(URL, movieFestivalCodeName)
+            self.getSingleYearUrl(URL, movieFestivalCodeName, result)
             i = i + 1
             time.sleep(0.1)
             URL = self.URL + movieFestivalCodeName + '/' + str(i) + "/"
             res = requests.get(URL)
-                              
-
-    def main(self, movieFestivalCodeName):
-        self.getAllYearsUrl(movieFestivalCodeName)
+        self.writeToFile(savePath + movieFestivalCodeName, result)                      
+        
+    def main(self, movieFestivalCodeName, savePath):
+        self.getAllYearsUrl(movieFestivalCodeName, savePath)
         
 class DummyBrowser:
     def __init__(self):
@@ -73,12 +74,12 @@ class DummyBrowser:
 
 
 Berlin = MovieFestivalSpider()
-Berlin.main("berlinale")
+Berlin.main("berlinale", 'D:/')
 
 Venice = MovieFestivalSpider()
-Venice.main("venice")
+Venice.main("venice", 'D:/')
 
 Cannes = MovieFestivalSpider()
-Cannes.main("cannes")
+Cannes.main("cannes", 'D:/')
 
 #dummyHand = DummyBrowser()
